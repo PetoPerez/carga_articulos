@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resultados · Shopify Uploader</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    .header {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .header h1 { color: #333; font-size: 1.8em; }
+    .header p  { color: #666; font-size: 1em; margin-top: 4px; }
+
+    /* ── Stats ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(102,126,234,.4);
+    }
+    .stat-number { font-size: 2.2em; font-weight: 700; margin: 6px 0; }
+    .stat-label  { font-size: .9em; opacity: .9; }
+    .stat-number.green { color: #a7f3d0; }
+    .stat-number.red   { color: #fca5a5; }
+    .stat-number.amber { color: #fde68a; }
+
+    /* ── Controles ── */
+    .controles {
+      background: white;
+      padding: 20px 24px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 20px;
+      border-radius: 8px; border: none; cursor: pointer;
+      font-size: .9em; font-weight: 600;
+      transition: all .2s;
+    }
+    .btn:active { transform: scale(.98); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102,126,234,.4);
+    }
+    .btn-primary:hover { box-shadow: 0 6px 20px rgba(102,126,234,.6); transform: translateY(-1px); }
+
+    .btn-ghost {
+      background: white; color: #667eea;
+      border: 2px solid #667eea;
+    }
+    .btn-ghost:hover { background: #f0f2ff; }
+
+    .filter-btn {
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      color: #666;
+      font-size: .85em; font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .filter-btn:hover  { border-color: #667eea; color: #667eea; }
+    .filter-btn.active {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-color: transparent;
+      color: white;
+    }
+
+    .search-box {
+      margin-left: auto;
+      padding: 9px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: .9em;
+      width: 220px;
+      transition: border-color .2s;
+    }
+    .search-box:focus { outline: none; border-color: #667eea; }
+
+    /* ── Tabla ── */
+    .table-wrap {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    th {
+      padding: 14px 16px;
+      text-align: left;
+      color: white;
+      font-weight: 600;
+      font-size: .88em;
+      letter-spacing: .03em;
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: .9em;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .8em; font-weight: 700;
+    }
+    .badge.ok     { background: #e8f5e9; color: #2e7d32; }
+    .badge.err    { background: #ffebee; color: #c62828; }
+    .badge.skip   { background: #fff8e1; color: #e65100; }
+
+    .img-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%; display: inline-block;
+    }
+    .img-dot.yes { background: #4CAF50; }
+    .img-dot.no  { background: #ccc; }
+
+    .err-msg {
+      font-size: .82em; color: #c62828;
+      max-width: 200px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .empty-state {
+      padding: 60px; text-align: center; color: #999; font-size: .95em;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: white; border-radius: 10px;
+      padding: 12px 20px; font-size: .9em; font-weight: 500;
+      box-shadow: 0 8px 30px rgba(0,0,0,.15);
+      border-left: 4px solid #667eea;
+      transform: translateY(16px); opacity: 0;
+      transition: all .25s ease; z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.ok   { border-left-color: #4CAF50; color: #2e7d32; }
+    #toast.err  { border-left-color: #f44336; color: #c62828; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>📊 Resultados de la carga</h1>
+      <p>Última sincronización con Shopify · Procomex</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" onclick="downloadTracked()">⬇️ Tracking</button>
+      <a href="/" style="text-decoration:none">
+        <button class="btn btn-primary">← Nueva carga</button>
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Procesados</div>
+      <div class="stat-number" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Exitosos</div>
+      <div class="stat-number green" id="stat-ok">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Omitidos</div>
+      <div class="stat-number amber" id="stat-skip">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Errores</div>
+      <div class="stat-number red" id="stat-err">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Con imagen</div>
+      <div class="stat-number" id="stat-imgs">—</div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="controles">
+    <button class="filter-btn active" onclick="setFilter('all', this)">Todos</button>
+    <button class="filter-btn" onclick="setFilter('success', this)">✅ Exitosos</button>
+    <button class="filter-btn" onclick="setFilter('omitido', this)">⏭️ Omitidos</button>
+    <button class="filter-btn" onclick="setFilter('error', this)">❌ Errores</button>
+    <input class="search-box" id="search-box" type="text"
+           placeholder="Buscar código / nombre..."
+           oninput="renderTable()"/>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Número</th>
+          <th>Nombre</th>
+          <th>Stock</th>
+          <th>Img</th>
+          <th>Estado</th>
+          <th>Shopify ID</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+    <div class="empty-state" id="empty-state" style="display:none">
+      Sin resultados para mostrar.
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+let allResults    = [];
+let currentFilter = 'all';
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function downloadTracked() { window.location.href = '/download/tracked.xlsx'; }
+
+function loadResults() {
+  const raw = sessionStorage.getItem('lastResults');
+  if (!raw) {
+    document.getElementById('empty-state').style.display = 'block';
+    document.getElementById('empty-state').textContent   = 'No hay resultados en esta sesión. Realiza una carga primero.';
+    return;
+  }
+  try {
+    const data = JSON.parse(raw);
+    allResults = data.resultados || [];
+    const { total_procesados, exitosos, omitidos, errores } = data.estadisticas;
+    document.getElementById('stat-total').textContent = total_procesados;
+    document.getElementById('stat-ok').textContent    = exitosos;
+    document.getElementById('stat-skip').textContent  = omitidos || 0;
+    document.getElementById('stat-err').textContent   = errores;
+    document.getElementById('stat-imgs').textContent  = allResults.filter(r => r.tiene_imagen).length;
+    renderTable();
+  } catch(e) { console.error(e); }
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const q     = document.getElementById('search-box').value.toLowerCase();
+  const tbody = document.getElementById('result-body');
+  const empty = document.getElementById('empty-state');
+
+  const rows = allResults.filter(r => {
+    if (currentFilter === 'success' && r.status !== 'success') return false;
+    if (currentFilter === 'omitido' && r.status !== 'omitido') return false;
+    if (currentFilter === 'error'   && r.status !== 'error')   return false;
+    if (q) {
+      const hay = `${r.codigo} ${r.nombre||''} ${r.numero||''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (!rows.length) {
+    tbody.innerHTML     = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = rows.map(r => {
+    const badgeClass = r.status === 'success' ? 'ok' : r.status === 'omitido' ? 'skip' : 'err';
+    const badgeText  = r.status === 'success' ? '✅ ok' : r.status === 'omitido' ? '⏭️ omitido' : '❌ error';
+    return `<tr>
+      <td><code style="background:#f0f2ff;padding:2px 8px;border-radius:4px;font-size:.85em">${esc(r.codigo)}</code></td>
+      <td style="color:#888;font-size:.85em">${esc(r.numero||'—')}</td>
+      <td>${esc(r.nombre||'—')}</td>
+      <td style="font-weight:600">${r.existencia??'—'}</td>
+      <td><span class="img-dot ${r.tiene_imagen?'yes':'no'}" title="${r.tiene_imagen?'Con imagen':'Sin imagen'}"></span></td>
+      <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+      <td style="font-size:.82em;color:#888">${r.shopify_id||'—'}</td>
+      <td>${r.status!=='success'&&r.mensaje
+        ? `<span class="err-msg" title="${esc(r.mensaje)}">${esc(r.mensaje)}</span>`
+        : '<span style="color:#ccc">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+loadResults();
+</script>
+</body>
+</html>

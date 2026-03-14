@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shopify Uploader · Procomex</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.2);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .header h1 { color: #333; font-size: 1.8em; }
+    .header p  { color: #666; font-size: 1em; margin-top: 4px; }
+
+    .status-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .status-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: #f5f5f5; border-radius: 20px;
+      padding: 6px 14px; font-size: .85em; font-weight: 600; color: #444;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ccc;
+    }
+    .dot.ok  { background: #4CAF50; box-shadow: 0 0 6px #4CAF50; }
+    .dot.err { background: #f44336; }
+
+    /* ── Stats ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(102,126,234,.4);
+    }
+    .stat-number { font-size: 2.2em; font-weight: 700; margin: 6px 0; }
+    .stat-label  { font-size: .9em; opacity: .9; }
+    .stat-number.green  { color: #a7f3d0; }
+    .stat-number.red    { color: #fca5a5; }
+    .stat-number.amber  { color: #fde68a; }
+
+    /* ── Steps ── */
+    .step-card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+      margin-bottom: 16px;
+      overflow: hidden;
+      border-left: 5px solid #e0e0e0;
+      transition: border-color .3s;
+    }
+    .step-card.active { border-left-color: #667eea; }
+    .step-card.done   { border-left-color: #4CAF50; }
+
+    .step-header {
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      font-weight: 700;
+      font-size: .9em;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-card.done .step-num { background: linear-gradient(135deg, #4CAF50, #2e7d32); }
+
+    .step-title { font-size: 1.05em; font-weight: 600; color: #333; flex: 1; }
+    .step-badge {
+      font-size: .8em; font-weight: 600;
+      padding: 3px 12px; border-radius: 20px;
+      background: #e8f5e9; color: #2e7d32;
+      display: none;
+    }
+    .step-card.done .step-badge { display: inline; }
+
+    .step-body {
+      padding: 0 24px 24px;
+      display: none;
+    }
+    .step-card.active .step-body { display: block; }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed #c5cae9;
+      border-radius: 10px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all .2s;
+      background: #fafafa;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #667eea;
+      background: #f0f2ff;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 2em; margin-bottom: 8px; }
+    .drop-label { color: #555; font-size: .95em; }
+    .drop-label span { color: #667eea; font-weight: 600; }
+    .drop-hint { color: #999; font-size: .82em; margin-top: 4px; }
+
+    /* ── File info ── */
+    .file-info {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: #f0f2ff;
+      border-radius: 8px;
+      font-size: .88em;
+      color: #555;
+    }
+    .file-info.visible { display: flex; }
+    .file-info-name { color: #333; font-weight: 500; flex: 1; }
+
+    /* ── Botones ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 11px 24px;
+      border-radius: 8px; border: none; cursor: pointer;
+      font-size: .95em; font-weight: 600;
+      transition: all .2s;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn:active   { transform: scale(.98); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(102,126,234,.4);
+    }
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 20px rgba(102,126,234,.6);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: white; color: #667eea;
+      border: 2px solid #667eea;
+    }
+    .btn-ghost:hover:not(:disabled) { background: #f0f2ff; }
+
+    .btn-success {
+      background: linear-gradient(135deg, #4CAF50, #2e7d32);
+      color: white;
+      box-shadow: 0 4px 15px rgba(76,175,80,.35);
+    }
+    .btn-success:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(76,175,80,.5); transform: translateY(-1px); }
+
+    .btn-danger {
+      background: white; color: #f44336;
+      border: 2px solid #f44336;
+    }
+    .btn-danger:hover:not(:disabled) { background: #fff5f5; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+
+    /* ── Image grid ── */
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+      gap: 6px; margin-top: 10px;
+    }
+    .img-thumb {
+      aspect-ratio: 1; border-radius: 6px;
+      object-fit: cover; border: 2px solid #e0e0e0;
+    }
+    .img-more {
+      aspect-ratio: 1; border-radius: 6px;
+      background: #f0f2ff; border: 2px dashed #c5cae9;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8em; color: #667eea; font-weight: 600;
+    }
+
+    /* ── Log ── */
+    .log { margin-top: 12px; font-size: .88em; line-height: 1.8; color: #666; }
+    .log .ok   { color: #4CAF50; font-weight: 600; }
+    .log .err  { color: #f44336; font-weight: 600; }
+    .log .warn { color: #FF9800; font-weight: 600; }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      height: 6px; background: #e0e0e0;
+      border-radius: 6px; margin-top: 14px;
+      overflow: hidden; display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      width: 0%; transition: width .4s ease;
+      border-radius: 6px;
+    }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+    .spinner.dark {
+      border-color: rgba(102,126,234,.3);
+      border-top-color: #667eea;
+    }
+
+    /* ── Live feed ── */
+    .live-feed {
+      margin-top: 14px;
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid #e8e8f0;
+      border-radius: 8px;
+      background: #fafafa;
+      display: none;
+    }
+    .live-feed.visible { display: block; }
+    .feed-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: .83em; color: #555;
+      animation: fadeIn .2s ease;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .feed-icon { font-size: 1em; flex-shrink: 0; }
+    .feed-code { font-weight: 600; color: #333; min-width: 70px; }
+    .feed-name { color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .phase-label {
+      font-size: .85em; color: #667eea; font-weight: 600;
+      margin-top: 10px; display: none;
+    }
+    .phase-label.visible { display: block; }
+    @keyframes pulse-text {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .5; }
+    }
+    .phase-label.pulsing { animation: pulse-text 1.2s ease-in-out infinite; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: white;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: .9em; font-weight: 500;
+      box-shadow: 0 8px 30px rgba(0,0,0,.15);
+      border-left: 4px solid #667eea;
+      transform: translateY(16px); opacity: 0;
+      transition: all .25s ease; z-index: 999;
+      max-width: 300px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.ok   { border-left-color: #4CAF50; color: #2e7d32; }
+    #toast.err  { border-left-color: #f44336; color: #c62828; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>🛍️ Shopify Uploader</h1>
+      <p>Carga masiva de productos · Procomex</p>
+    </div>
+    <div class="status-row">
+      <div class="status-badge">
+        <div class="dot {% if db_connected %}ok{% else %}err{% endif %}"></div>
+        Base de datos
+      </div>
+      <div class="status-badge">
+        <div class="dot {% if shopify_connected %}ok{% else %}err{% endif %}"></div>
+        Shopify
+      </div>
+      <a href="/results" style="text-decoration:none">
+        <button class="btn btn-ghost" style="padding:8px 16px;font-size:.85em">
+          📊 Ver resultados
+        </button>
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Productos cargados</div>
+      <div class="stat-number" id="stat-productos">{{ total_productos }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Imágenes</div>
+      <div class="stat-number" id="stat-imgs">{{ imagenes_cargadas }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Creados exitosos</div>
+      <div class="stat-number green" id="stat-ok">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Omitidos / Errores</div>
+      <div class="stat-number amber" id="stat-skip-err">—</div>
+    </div>
+  </div>
+
+  <!-- Paso 1: Excel -->
+  <div class="step-card {% if productos_cargados %}done{% else %}active{% endif %}" id="step-1">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-title">Cargar archivo Excel</div>
+      <span class="step-badge" id="badge-excel">{{ total_productos }} productos</span>
+    </div>
+    <div class="step-body">
+      <div class="drop-zone" id="drop-excel">
+        <input type="file" id="excel-input" accept=".xlsx,.xls"/>
+        <div class="drop-icon">📄</div>
+        <p class="drop-label">Arrastra el archivo o <span>selecciona</span></p>
+        <p class="drop-hint">Columnas requeridas: Codigo · Numero</p>
+      </div>
+      <div class="file-info {% if productos_cargados %}visible{% endif %}" id="excel-info">
+        <span>📎</span>
+        <span class="file-info-name" id="excel-name">archivo cargado</span>
+        <span id="excel-count">{{ total_productos }} productos</span>
+      </div>
+      <div class="log" id="excel-log"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-upload-excel" disabled>
+          Subir Excel
+        </button>
+        {% if productos_cargados %}
+        <button class="btn btn-ghost" onclick="continueToStep(2)">Continuar →</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Paso 2: Imágenes -->
+  <div class="step-card {% if imagenes_cargadas > 0 %}done{% elif productos_cargados %}active{% endif %}" id="step-2">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-title">Cargar imágenes</div>
+      <span class="step-badge" id="badge-imgs">{{ imagenes_cargadas }} imágenes</span>
+    </div>
+    <div class="step-body">
+      <div class="drop-zone" id="drop-images">
+        <input type="file" id="images-input" accept=".png,.jpg,.jpeg,.webp" multiple/>
+        <div class="drop-icon">🖼️</div>
+        <p class="drop-label">Arrastra las imágenes o <span>selecciona</span></p>
+        <p class="drop-hint">PNG · JPG · WEBP · el nombre debe contener el número de referencia</p>
+      </div>
+      <div class="log" id="images-log"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-upload-images" disabled>
+          Subir imágenes
+        </button>
+        <button class="btn btn-ghost" onclick="continueToStep(3)">
+          Omitir →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paso 3: Crear en Shopify -->
+  <div class="step-card active" id="step-3">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-title">Crear productos en Shopify</div>
+      <span class="step-badge" id="badge-shopify"></span>
+    </div>
+    <div class="step-body">
+      <div class="log" id="shopify-log">
+        <span class="warn">→ Completa los pasos anteriores antes de continuar.</span>
+      </div>
+      <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="phase-label" id="phase-label"></div>
+      <div class="live-feed" id="live-feed"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-create" onclick="createProducts()">
+          🚀 Crear productos
+        </button>
+        <a href="/results" style="text-decoration:none">
+          <button class="btn btn-success">📊 Ver resultados</button>
+        </a>
+        <button class="btn btn-ghost" onclick="downloadTracked()" style="margin-left:auto">
+          ⬇️ Tracking
+        </button>
+        <button class="btn btn-danger" onclick="clearUploads()">
+          🗑️ Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div id="toast"></div>
+
+<script src="/static/app.js"></script>
+<script>
+let excelFile  = null;
+let imageFiles = [];
+
+// ── Steps ──
+function continueToStep(n) {
+  document.querySelectorAll('.step-card').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('step-' + n);
+  if (el) el.classList.add('active');
+}
+
+function markDone(stepN, badgeId, badgeText) {
+  const el = document.getElementById('step-' + stepN);
+  el.classList.remove('active');
+  el.classList.add('done');
+  if (badgeId) {
+    const b = document.getElementById(badgeId);
+    b.textContent   = badgeText;
+    b.style.display = 'inline';
+  }
+}
+
+// ── Excel ──
+setupDrop('drop-excel', 'excel-input', files => {
+  const f = files.find(f => /\.(xlsx|xls)$/i.test(f.name));
+  if (!f) { toast('Solo se aceptan archivos .xlsx o .xls', 'err'); return; }
+  excelFile = f;
+  document.getElementById('excel-name').textContent  = f.name;
+  document.getElementById('excel-count').textContent = fmtBytes(f.size);
+  document.getElementById('excel-info').classList.add('visible');
+  document.getElementById('btn-upload-excel').disabled = false;
+  document.getElementById('excel-log').innerHTML = `<span>→ ${f.name} listo para subir</span>`;
+});
+
+document.getElementById('btn-upload-excel').addEventListener('click', async () => {
+  if (!excelFile) return;
+  const btn     = document.getElementById('btn-upload-excel');
+  const restore = btnLoading(btn, 'Subiendo...');
+  const fd      = new FormData();
+  fd.append('excel_file', excelFile);
+  try {
+    const res  = await fetch('/upload-excel', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error');
+    document.getElementById('excel-log').innerHTML   = `<span class="ok">✅ ${data.message}</span>`;
+    document.getElementById('excel-count').textContent = data.message;
+    document.getElementById('stat-productos').textContent = data.message.match(/\d+/)?.[0] ?? '?';
+    markDone(1, 'badge-excel', data.message.match(/\d+/)?.[0] + ' productos');
+    continueToStep(2);
+    toast(data.message, 'ok');
+  } catch (e) {
+    document.getElementById('excel-log').innerHTML = `<span class="err">❌ ${e.message}</span>`;
+    toast(e.message, 'err');
+    restore();
+  }
+});
+
+// ── Imágenes ──
+setupDrop('drop-images', 'images-input', files => {
+  const valid = files.filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f.name));
+  if (!valid.length) { toast('No se encontraron imágenes válidas', 'err'); return; }
+  imageFiles = valid;
+  document.getElementById('images-log').innerHTML =
+    `<span>→ ${valid.length} imagen${valid.length !== 1 ? 'es' : ''} listas para subir</span>`;
+  document.getElementById('btn-upload-images').disabled = false;
+});
+
+document.getElementById('btn-upload-images').addEventListener('click', async () => {
+  if (!imageFiles.length) return;
+  const btn     = document.getElementById('btn-upload-images');
+  const restore = btnLoading(btn, 'Subiendo...');
+  const fd      = new FormData();
+  imageFiles.forEach(f => fd.append('images', f));
+  try {
+    const res  = await fetch('/upload-images', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error');
+    document.getElementById('images-log').innerHTML =
+      `<span class="ok">✅ ${data.message}</span>` +
+      (data.errores ? `<br><span class="warn">⚠️ ${data.errores.length} con error</span>` : '');
+    document.getElementById('stat-imgs').textContent = imageFiles.length;
+    markDone(2, 'badge-imgs', imageFiles.length + ' imágenes');
+    continueToStep(3);
+    toast(data.message, 'ok');
+  } catch (e) {
+    document.getElementById('images-log').innerHTML = `<span class="err">❌ ${e.message}</span>`;
+    toast(e.message, 'err');
+    restore();
+  }
+});
+
+// ── Crear productos (SSE) ──
+async function createProducts() {
+  const btn   = document.getElementById('btn-create');
+  const log   = document.getElementById('shopify-log');
+  const wrap  = document.getElementById('progress-wrap');
+  const bar   = document.getElementById('progress-bar');
+  const feed  = document.getElementById('live-feed');
+  const phase = document.getElementById('phase-label');
+
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spinner dark"></span> Procesando...';
+  log.innerHTML = '';
+  wrap.classList.add('visible');
+  feed.classList.add('visible');
+  feed.innerHTML = '';
+  phase.classList.add('visible', 'pulsing');
+  phase.textContent    = 'Iniciando...';
+  bar.style.width      = '3%';
+  bar.style.background = 'linear-gradient(90deg, #667eea, #764ba2)';
+
+  const ICONS = { success: '✅', omitido: '⏭️', error: '❌' };
+
+  try {
+    const response = await fetch('/create-shopify-products', { method: 'POST' });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Error del servidor');
+    }
+
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Separar por doble salto de linea (delimitador SSE)
+      const chunks = buffer.split('\n\n');
+      buffer = chunks.pop(); // fragmento incompleto al final
+
+      for (const chunk of chunks) {
+        if (!chunk.trim()) continue;
+        const evtMatch  = chunk.match(/^event:\s*(.+)$/m);
+        const dataMatch = chunk.match(/^data:\s*(.+)$/m);
+        if (!evtMatch || !dataMatch) continue;
+
+        const evt = evtMatch[1].trim();
+        let   data;
+        try { data = JSON.parse(dataMatch[1]); } catch { continue; }
+
+        if (evt === 'phase') {
+          phase.textContent = data.msg;
+          bar.style.width   = data.pct + '%';
+        }
+
+        if (evt === 'progress') {
+          bar.style.width   = data.pct + '%';
+          phase.textContent = 'Procesando ' + data.done + ' / ' + data.total;
+          const icon = ICONS[data.status] || '•';
+          const item = document.createElement('div');
+          item.className = 'feed-item';
+          item.innerHTML =
+            '<span class="feed-icon">' + icon + '</span>' +
+            '<span class="feed-code">' + esc(data.completado) + '</span>' +
+            '<span class="feed-name">' + esc(data.nombre || '') + '</span>';
+          feed.prepend(item);
+        }
+
+        if (evt === 'done') {
+          bar.style.width = '100%';
+          phase.classList.remove('pulsing');
+          phase.textContent = '¡Proceso completado!';
+
+          const s = data.estadisticas;
+          document.getElementById('stat-ok').textContent       = s.exitosos;
+          document.getElementById('stat-skip-err').textContent = (s.omitidos || 0) + ' / ' + s.errores;
+
+          log.innerHTML =
+            '<span class="ok">✅ ' + s.exitosos + ' creados</span>' +
+            (s.omitidos ? '&nbsp;&nbsp;<span class="warn">⏭️ ' + s.omitidos + ' omitidos</span>' : '') +
+            (s.errores  ? '&nbsp;&nbsp;<span class="err">❌ ' + s.errores + ' errores</span>' : '');
+
+          markDone(3, 'badge-shopify', s.exitosos + '/' + s.total_procesados + ' ok');
+          toast(s.exitosos + ' productos creados', 'ok');
+          sessionStorage.setItem('lastResults', JSON.stringify(data));
+          btn.disabled  = false;
+          btn.innerHTML = '🚀 Crear productos';
+        }
+      }
+    }
+  } catch (e) {
+    bar.style.width      = '100%';
+    bar.style.background = '#f44336';
+    phase.classList.remove('pulsing');
+    phase.textContent = '';
+    log.innerHTML     = '<span class="err">❌ ' + e.message + '</span>';
+    toast(e.message, 'err');
+    btn.disabled  = false;
+    btn.innerHTML = '🚀 Crear productos';
+  }
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Limpiar al cerrar ──
+window.addEventListener('beforeunload', () => {
+  navigator.sendBeacon('/clear-uploads');
+});
+</script>
+</body>
+</html>
