@@ -15,26 +15,28 @@ logger = logging.getLogger(__name__)
 
 class DatabaseService:
     def __init__(self):
-        user     = os.getenv("DB_USER", "").strip()
-        password = os.getenv("DB_PASSWORD", "").strip()
-        host     = os.getenv("DB_HOST", "").strip()
-        port     = os.getenv("DB_PORT", "1435").strip()
+        # Opcion 1: URL completa (recomendado en Railway para evitar problemas con # en password)
+        database_url_env = os.getenv("DATABASE_URL", "").strip()
 
-        if not all([user, password, host]):
-            logger.warning("Credenciales de BD incompletas en .env")
-            self.engine       = None
-            self.SessionLocal = None
-            return
+        if database_url_env:
+            self.database_url = database_url_env
+            logger.info("Usando DATABASE_URL desde variables de entorno")
+        else:
+            # Opcion 2: construir desde variables individuales (uso local con .env)
+            user     = os.getenv("DB_USER", "").strip()
+            password = os.getenv("DB_PASSWORD", "").strip()
+            host     = os.getenv("DB_HOST", "").strip()
+            port     = os.getenv("DB_PORT", "1435").strip()
 
-        # quote_plus escapa caracteres especiales en la contraseña
-        # ej: # → %23  |  @ → %40  |  & → %26
-        password_encoded = quote_plus(password)
-        
+            if not all([user, password, host]):
+                logger.warning("Credenciales de BD incompletas en .env")
+                self.engine       = None
+                self.SessionLocal = None
+                return
 
-        # URL sin nombre de BD — igual que la versión que funcionaba
-        self.database_url = (
-            f"mssql+pymssql://{user}:{password_encoded}@{host}:{port}"
-        )
+            # quote_plus escapa # → %23, @ → %40, etc.
+            password_encoded  = quote_plus(password)
+            self.database_url = f"mssql+pymssql://{user}:{password_encoded}@{host}:{port}"
 
         self.engine       = None
         self.SessionLocal = None
@@ -52,9 +54,9 @@ class DatabaseService:
                 autocommit=False, autoflush=False, bind=self.engine
             )
             if self.test_connection():
-                logger.info("Conexión a BD establecida y verificada")
+                logger.info("Conexion a BD establecida y verificada")
             else:
-                logger.error("Fallo en la verificación de conexión")
+                logger.error("Fallo en la verificacion de conexion")
         except Exception as e:
             logger.error(f"Error al conectar con la BD: {e}")
             self.engine       = None
@@ -114,11 +116,9 @@ class DatabaseService:
                         if key:
                             productos[key] = d
 
-            logger.info(
-                f"Encontrados {len(productos)} de {len(codigos_limpios)} productos"
-            )
+            logger.info(f"Encontrados {len(productos)} de {len(codigos_limpios)} productos")
         except Exception as e:
-            logger.error(f"Error al consultar múltiples productos: {e}")
+            logger.error(f"Error al consultar multiples productos: {e}")
 
         return productos
 
@@ -129,12 +129,12 @@ class DatabaseService:
             with self.engine.connect() as conn:
                 return conn.execute(text("SELECT 1 AS test")).scalar() == 1
         except Exception as e:
-            logger.error(f"Error al probar conexión: {e}")
+            logger.error(f"Error al probar conexion: {e}")
             return False
 
     def get_database_info(self) -> Dict[str, Any]:
         if not self.engine:
-            return {"error": "Sin conexión", "conexion_exitosa": False}
+            return {"error": "Sin conexion", "conexion_exitosa": False}
         try:
             with self.engine.connect() as conn:
                 total = conn.execute(
@@ -175,10 +175,10 @@ class DatabaseService:
                     {"limit": limit, "termino": f"%{termino.strip()}%"},
                 ).mappings().fetchall()
                 productos = [dict(r) for r in results]
-                logger.info(f"Búsqueda '{termino}': {len(productos)} resultados")
+                logger.info(f"Busqueda '{termino}': {len(productos)} resultados")
                 return productos
         except Exception as e:
-            logger.error(f"Error en búsqueda: {e}")
+            logger.error(f"Error en busqueda: {e}")
             return []
 
     def get_low_stock_products(self, umbral: int = 5) -> list:
@@ -203,7 +203,7 @@ class DatabaseService:
     def close(self):
         if self.engine:
             self.engine.dispose()
-            logger.info("Conexión a BD cerrada")
+            logger.info("Conexion a BD cerrada")
 
 
 # Instancia global
