@@ -77,7 +77,6 @@ def _save_tracked_df(df: pd.DataFrame) -> None:
         tmp.replace(TRACK_XLSX)
 
 def _to_number(val):
-    """Convierte cualquier valor numerico a int, manejando '2.0', 2.0, '2', None."""
     if val is None:
         return 0
     try:
@@ -169,7 +168,7 @@ def _procesar_producto(item, productos_db, skus_en_shopify, imagenes):
         }
 
     # 3. Stock en 0 — no se agrega
-    existencia = int(float(prod_db.get("Existencia", 0) or 0))
+    existencia = _to_number(prod_db.get("Existencia", 0))
     if existencia <= 0:
         return {
             "codigo":     codigo,
